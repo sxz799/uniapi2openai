@@ -78,6 +78,10 @@ func SendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg stri
 
 func SendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg string, c *gin.Context) {
 	resp, err := cs.SendMessage(ctx, genai.Text(lastMsg))
+	if err!=nil{
+		c.String(200, "SendMessage Error:",err.Error())
+		return
+	}
 	if len(resp.Candidates) < 1 || len(resp.Candidates[0].Content.Parts) < 1 {
 		c.String(200, "no response")
 		return

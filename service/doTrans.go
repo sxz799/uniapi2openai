@@ -49,42 +49,74 @@ func DoTrans(apiKey string, openaiBody myModel.ChatGPTRequestBody, c *gin.Contex
 		)
 	}
 
-	iter := cs.SendMessageStream(ctx, genai.Text(lastMsg))
-	for {
-		resp, err := iter.Next()
-		if err == iterator.Done {
-			c.Writer.WriteString("data: [DONE]\n")
-			c.Writer.Flush()
-			break
-		}
-		if err != nil {
-			break
-		}
-		for _, candidate := range resp.Candidates {
-			for _, p := range candidate.Content.Parts {
-				str := fmt.Sprintf("%s", p)
-				dd := myModel.Delta{
-					Role:    "assistant",
-					Content: str,
-				}
-				cc := myModel.ChoiceChunk{
-					Delta: dd,
-				}
-				chunk := myModel.ChatCompletionChunk{
-					ID:      fmt.Sprintf("%d", time.Now().Unix()),
-					Object:  "chat.completion.chunk",
-					Created: time.Now().Unix(),
-					Model:   "gemini-pro",
-					Choices: []myModel.ChoiceChunk{cc},
-				}
-				marshal, _ := json.Marshal(chunk)
-				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n")
-				if err != nil {
-					return
-				}
+	if openaiBody.Stream {
+		iter := cs.SendMessageStream(ctx, genai.Text(lastMsg))
+		for {
+			resp, err := iter.Next()
+			if err == iterator.Done {
+				c.Writer.WriteString("data: [DONE]\n")
 				c.Writer.Flush()
+				break
 			}
+			if err != nil {
+				break
+			}
+			for _, candidate := range resp.Candidates {
+				for _, p := range candidate.Content.Parts {
+					str := fmt.Sprintf("%s", p)
+					dd := myModel.Delta{
+						Role:    "assistant",
+						Content: str,
+					}
+					cc := myModel.ChoiceChunk{
+						Delta: dd,
+					}
+					chunk := myModel.ChatCompletionChunk{
+						ID:      fmt.Sprintf("%d", time.Now().Unix()),
+						Object:  "chat.completion.chunk",
+						Created: time.Now().Unix(),
+						Model:   "gemini-pro",
+						Choices: []myModel.ChoiceChunk{cc},
+					}
+					marshal, _ := json.Marshal(chunk)
+					_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
+					if err != nil {
+						return
+					}
+					c.Writer.Flush()
+				}
+			}
+
 		}
+	} else {
+		resp, err := cs.SendMessage(ctx, genai.Text(lastMsg))
+		if len(resp.Candidates) < 1 || len(resp.Candidates[0].Content.Parts) < 1 {
+			c.String(200, "no response")
+			return
+		}
+		part := resp.Candidates[0].Content.Parts[0]
+		str := fmt.Sprintf("%s", part)
+		msg := myModel.Message{
+			Role:    "assistant",
+			Content: str,
+		}
+		cho := myModel.Choice{
+			Message: msg,
+		}
+		cc := myModel.ChatCompletion{
+			ID:      fmt.Sprintf("%d", time.Now().Unix()),
+			Object:  "chat.completion.chunk",
+			Created: time.Now().Unix(),
+			Model:   "gemini-pro",
+			Choices: []myModel.Choice{cho},
+		}
+		marshal, _ := json.Marshal(cc)
+		_, err = c.Writer.Write(marshal)
+		if err != nil {
+			return
+		}
+		c.Writer.Flush()
 
 	}
+
 }

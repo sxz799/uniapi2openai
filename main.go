@@ -11,6 +11,9 @@ import (
 func main() {
 
 	r := gin.Default()
+	r.GET("/", func(context *gin.Context) {
+		context.String(200, "部署成功！")
+	})
 
 	r.POST("v1/chat/completions", func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")

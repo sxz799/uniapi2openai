@@ -3,41 +3,34 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/generative-ai-go/genai"
-	myModel "github/sxz799/gemini2chatgpt/model"
+	"github/sxz799/gemini2chatgpt/model"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"log"
-	"time"
+	"strings"
 )
 
-func DoTrans(apiKey string, openaiBody myModel.ChatGPTRequestBody, c *gin.Context) {
+func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context) {
 	ctx := context.Background()
-	// Access your API key as an environment variable (see "Set up your API key" above)
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer client.Close()
-
-	// For text-only input, use the gemini-pro model
-	model := client.GenerativeModel("gemini-pro")
-	// Initialize the chat
-	cs := model.StartChat()
+	gModel := client.GenerativeModel("gemini-pro")
+	cs := gModel.StartChat()
 	cs.History = []*genai.Content{}
 	lastMsg := ""
 	for i, msg := range openaiBody.Messages {
 		content := msg.Content
-		role := msg.Role
-
+		role := strings.ReplaceAll(msg.Role, "assistant", "model")
 		if i == len(openaiBody.Messages)-1 {
 			lastMsg = content
 			break
-		}
-		if role == "assistant" {
-			role = "model"
 		}
 		cs.History = append(cs.History,
 			&genai.Content{
@@ -50,73 +43,52 @@ func DoTrans(apiKey string, openaiBody myModel.ChatGPTRequestBody, c *gin.Contex
 	}
 
 	if openaiBody.Stream {
-		iter := cs.SendMessageStream(ctx, genai.Text(lastMsg))
-		for {
-			resp, err := iter.Next()
-			if err == iterator.Done {
-				c.Writer.WriteString("data: [DONE]\n")
-				c.Writer.Flush()
-				break
-			}
-			if err != nil {
-				break
-			}
-			for _, candidate := range resp.Candidates {
-				for _, p := range candidate.Content.Parts {
-					str := fmt.Sprintf("%s", p)
-					dd := myModel.Delta{
-						Role:    "assistant",
-						Content: str,
-					}
-					cc := myModel.ChoiceChunk{
-						Delta: dd,
-					}
-					chunk := myModel.ChatCompletionChunk{
-						ID:      fmt.Sprintf("%d", time.Now().Unix()),
-						Object:  "chat.completion.chunk",
-						Created: time.Now().Unix(),
-						Model:   "gemini-pro",
-						Choices: []myModel.ChoiceChunk{cc},
-					}
-					marshal, _ := json.Marshal(chunk)
-					_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
-					if err != nil {
-						return
-					}
-					c.Writer.Flush()
-				}
-			}
-
-		}
+		SendStreamResponse(cs, ctx, lastMsg, c)
 	} else {
-		resp, err := cs.SendMessage(ctx, genai.Text(lastMsg))
-		if len(resp.Candidates) < 1 || len(resp.Candidates[0].Content.Parts) < 1 {
-			c.String(200, "no response")
-			return
-		}
-		part := resp.Candidates[0].Content.Parts[0]
-		str := fmt.Sprintf("%s", part)
-		msg := myModel.Message{
-			Role:    "assistant",
-			Content: str,
-		}
-		cho := myModel.Choice{
-			Message: msg,
-		}
-		cc := myModel.ChatCompletion{
-			ID:      fmt.Sprintf("%d", time.Now().Unix()),
-			Object:  "chat.completion.chunk",
-			Created: time.Now().Unix(),
-			Model:   "gemini-pro",
-			Choices: []myModel.Choice{cho},
-		}
-		marshal, _ := json.Marshal(cc)
-		_, err = c.Writer.Write(marshal)
-		if err != nil {
-			return
-		}
-		c.Writer.Flush()
-
+		SendSingleResponse(cs, ctx, lastMsg, c)
 	}
+}
 
+func SendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg string, c *gin.Context) {
+	iter := cs.SendMessageStream(ctx, genai.Text(lastMsg))
+	for {
+		resp, err := iter.Next()
+		if errors.Is(err, iterator.Done) {
+			c.Writer.WriteString("data: [DONE]\n")
+			c.Writer.Flush()
+			break
+		}
+		if err != nil {
+			break
+		}
+		for _, candidate := range resp.Candidates {
+			for _, p := range candidate.Content.Parts {
+				str := fmt.Sprintf("%s", p)
+				chunk := model.NewChatCompletionChunk(str, "gemini-pro")
+				marshal, _ := json.Marshal(chunk)
+				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
+				if err != nil {
+					return
+				}
+				c.Writer.Flush()
+			}
+		}
+	}
+}
+
+func SendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg string, c *gin.Context) {
+	resp, err := cs.SendMessage(ctx, genai.Text(lastMsg))
+	if len(resp.Candidates) < 1 || len(resp.Candidates[0].Content.Parts) < 1 {
+		c.String(200, "no response")
+		return
+	}
+	part := resp.Candidates[0].Content.Parts[0]
+	str := fmt.Sprintf("%s", part)
+	cc := model.NewChatCompletion(str, "gemini-pro")
+	marshal, _ := json.Marshal(cc)
+	_, err = c.Writer.Write(marshal)
+	if err != nil {
+		return
+	}
+	c.Writer.Flush()
 }

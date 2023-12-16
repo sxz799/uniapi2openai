@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github/sxz799/gemini2chatgpt/model"
 	"github/sxz799/gemini2chatgpt/service"
@@ -11,6 +12,7 @@ import (
 func main() {
 
 	r := gin.Default()
+	r.Use(cors.Default())
 	r.GET("/", func(context *gin.Context) {
 		context.String(200, "部署成功！")
 	})

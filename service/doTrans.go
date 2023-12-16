@@ -59,6 +59,7 @@ func SendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg stri
 			break
 		}
 		if err != nil {
+			c.String(200,"err:"+err.Error())
 			break
 		}
 		for _, candidate := range resp.Candidates {

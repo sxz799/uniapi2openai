@@ -1,18 +1,35 @@
 package main
 
 import (
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github/sxz799/gemini2chatgpt/model"
 	"github/sxz799/gemini2chatgpt/service"
 	"log"
+	"net/http"
 	"strings"
 )
+
+func Cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		method := c.Request.Method
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "*")
+		c.Header("Access-Control-Allow-Headers", "*")
+		c.Header("Access-Control-Expose-Headers", "*")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		//放行所有OPTIONS方法
+		if method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+		}
+		// 处理请求
+		c.Next()
+	}
+}
 
 func main() {
 
 	r := gin.Default()
-	r.Use(cors.Default())
+	r.Use(Cors())
 	r.GET("/", func(context *gin.Context) {
 		context.String(200, "部署成功！")
 	})

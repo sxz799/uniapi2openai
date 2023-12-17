@@ -55,15 +55,16 @@ type ChatCompletionChunk struct {
 	Choices []ChoiceChunk `json:"choices"`
 }
 
-func NewChatCompletionChunk(msg, model string) *ChatCompletionChunk {
+func NewChatCompletionChunk(id,msg, model string) *ChatCompletionChunk {
 	cc := ChoiceChunk{
 		Delta: Delta{
 			Role:    "assistant",
 			Content: msg,
 		},
+		Index: 0,
 	}
 	return &ChatCompletionChunk{
-		ID:      fmt.Sprintf("%d", time.Now().Unix()),
+		ID:      id,
 		Object:  "chat.completion.chunk",
 		Created: time.Now().Unix(),
 		Model:   model,
@@ -79,7 +80,7 @@ func NewChatCompletion(msg, model string) *ChatCompletion {
 		},
 	}
 	return &ChatCompletion{
-		ID:      fmt.Sprintf("%d", time.Now().Unix()),
+		ID:      fmt.Sprintf("chatcmpl-%d", time.Now().Unix()),
 		Object:  "chat.completion",
 		Created: time.Now().Unix(),
 		Model:   model,

@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github/sxz799/gemini2chatgpt/model"
+	"log"
+	"time"
 	"github.com/gin-gonic/gin"
 	"github.com/google/generative-ai-go/genai"
-	"github/sxz799/gemini2chatgpt/model"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
-	"log"
-	"strings"
 )
 
 func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context) {
@@ -26,12 +26,19 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 	cs.History = []*genai.Content{}
 	lastMsg := ""
 	for i, msg := range openaiBody.Messages {
+		if msg.Role=="system"{
+			continue
+		}
 		content := msg.Content
-		role := strings.ReplaceAll(msg.Role, "assistant", "model")
+		role:="user"
+		if msg.Role!="user"{
+			role="model"
+		}
 		if i == len(openaiBody.Messages)-1 {
 			lastMsg = content
 			break
 		}
+		fmt.Println(role,":",msg.Content)
 		cs.History = append(cs.History,
 			&genai.Content{
 				Parts: []genai.Part{
@@ -43,6 +50,8 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 	}
 
 	if openaiBody.Stream {
+		c.Writer.Header().Set("Transfer-Encoding","chunked")
+		c.Writer.Header().Set("Content-Type","text/event-stream; charset=utf-8")
 		SendStreamResponse(cs, ctx, lastMsg, c)
 	} else {
 		SendSingleResponse(cs, ctx, lastMsg, c)
@@ -59,13 +68,15 @@ func SendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg stri
 			break
 		}
 		if err != nil {
+			fmt.Println(err)
 			c.String(200,"err:"+err.Error())
 			break
 		}
+		id:=fmt.Sprintf("chatcmpl-%d", time.Now().Unix())
 		for _, candidate := range resp.Candidates {
 			for _, p := range candidate.Content.Parts {
 				str := fmt.Sprintf("%s", p)
-				chunk := model.NewChatCompletionChunk(str, "gemini-pro")
+				chunk := model.NewChatCompletionChunk(id,str, "gemini-pro")
 				marshal, _ := json.Marshal(chunk)
 				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
 				if err != nil {

@@ -41,28 +41,20 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 			lastMsg = content
 			break
 		}
-		fmt.Println(role, ":", msg.Content)
-		cs.History = append(cs.History,
-			&genai.Content{
-				Parts: []genai.Part{
-					genai.Text(content),
-				},
-				Role: role,
-			},
-		)
+		cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(content)}, Role: role})
 	}
 
 	if openaiBody.Stream {
 		//支持 SSE特性
 		c.Writer.Header().Set("Transfer-Encoding", "chunked")
 		c.Writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
-		SendStreamResponse(cs, ctx, lastMsg, c)
+		sendStreamResponse(cs, ctx, lastMsg, c)
 	} else {
-		SendSingleResponse(cs, ctx, lastMsg, c)
+		sendSingleResponse(cs, ctx, lastMsg, c)
 	}
 }
 
-func SendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg string, c *gin.Context) {
+func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg string, c *gin.Context) {
 	iter := cs.SendMessageStream(ctx, genai.Text(lastMsg))
 	for {
 		resp, err := iter.Next()
@@ -72,7 +64,6 @@ func SendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg stri
 			break
 		}
 		if err != nil {
-			fmt.Println(err)
 			c.String(200, "err:"+err.Error())
 			break
 		}
@@ -92,7 +83,7 @@ func SendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg stri
 	}
 }
 
-func SendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg string, c *gin.Context) {
+func sendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg string, c *gin.Context) {
 	resp, err := cs.SendMessage(ctx, genai.Text(lastMsg))
 	if err != nil {
 		c.String(200, "SendMessage Error:", err.Error())

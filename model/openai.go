@@ -23,8 +23,8 @@ type Message struct {
 }
 
 type Delta struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string `json:"role,omitempty"`
+	Content string `json:"content,omitempty"`
 }
 
 type Choice struct {
@@ -33,9 +33,9 @@ type Choice struct {
 	Index        int     `json:"index"`
 }
 type ChoiceChunk struct {
-	Delta        Delta  `json:"delta"`
-	FinishReason string `json:"finish_reason"`
-	Index        int    `json:"index"`
+	Delta        Delta   `json:"delta"`
+	FinishReason *string `json:"finish_reason"`
+	Index        int     `json:"index"`
 }
 
 type ChatCompletion struct {
@@ -55,7 +55,7 @@ type ChatCompletionChunk struct {
 	Choices []ChoiceChunk `json:"choices"`
 }
 
-func NewChatCompletionChunk(id,msg, model string) *ChatCompletionChunk {
+func NewChatCompletionChunk(id, msg, model string) *ChatCompletionChunk {
 	cc := ChoiceChunk{
 		Delta: Delta{
 			Role:    "assistant",

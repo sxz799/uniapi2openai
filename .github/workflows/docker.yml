@@ -24,7 +24,7 @@ jobs:
       uses: docker/metadata-action@v4.4.0
       id: meta
       with:
-       images: sxz799/job-log
+       images: sxz799/gemini2chatgpt
        tags: latest
 
     - name: Build and push Docker images

@@ -31,9 +31,8 @@ func main() {
 	r := gin.Default()
 	r.Use(Cors())
 	r.GET("/", func(context *gin.Context) {
-		context.String(200, "部署成功！")
+		context.String(200, "部署成功！[https://github.com/sxz799/gemini2chatgpt]")
 	})
-
 	r.POST("v1/chat/completions", func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")
 		if len(strings.Split(auth, " ")) != 2 {
@@ -53,7 +52,11 @@ func main() {
 		}
 		service.DoTrans(apiKey, originBody, c)
 	})
-
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"msg": "仅代理了`v1/chat/completions`接口",
+		})
+	})
 	err := r.Run(":8080")
 	if err != nil {
 		log.Fatal(err)

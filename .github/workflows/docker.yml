@@ -1,9 +1,11 @@
 name: Docker Image CI
 
 on:
-
-   push:
-     branches: [ "main" ]
+  push:
+    paths:
+      - '**' # 包含所有文件
+      - '!README.md' # 排除特定文件
+      - '!.gitignore' # 排除特定文件
 
 
 jobs:

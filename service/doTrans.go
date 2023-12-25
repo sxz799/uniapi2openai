@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github/sxz799/gemini2chatgpt/model"
+	"log"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/generative-ai-go/genai"
-	"github/sxz799/gemini2chatgpt/model"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
-	"log"
-	"time"
 )
 
 func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context) {
@@ -26,15 +28,18 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 	cs.History = []*genai.Content{}
 	lastMsg := ""
 	for i, msg := range openaiBody.Messages {
-		// 忽略 chat-next-web的默认提示词
-		if msg.Role == "system" {
+		// 忽略 chat-next-web的默认提示词 You are ChatGPT, a large language model trained by OpenAI.\nCarefully heed the user's instructions. \nRespond using Markdown.
+		if msg.Role == "system" && strings.HasPrefix(msg.Content,"You are ChatGPT") {
 			continue
 		}
 		content := msg.Content
+		role:=msg.Role
 		// 将assistant角色替换为model
-		role := "user"
-		if msg.Role != "user" {
+		if msg.Role == "assistant" {
 			role = "model"
+		}
+		if msg.Role == "system" {
+			role = "user"
 		}
 		// 最后一条消息不写入历史记录 而是用于下一次请求
 		if i == len(openaiBody.Messages)-1 {

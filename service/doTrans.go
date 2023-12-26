@@ -29,7 +29,7 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 	lastMsg := ""
 	for i, msg := range openaiBody.Messages {
 		// 忽略 chat-next-web的默认提示词 You are ChatGPT, a large language model trained by OpenAI.\nCarefully heed the user's instructions. \nRespond using Markdown.
-		if msg.Role == "system" && strings.HasPrefix(msg.Content,"You are ChatGPT") {
+		if msg.Role == "system" && strings.Contains(msg.Content,"You are ChatGPT") {
 			continue
 		}
 		content := msg.Content
@@ -69,7 +69,10 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg stri
 			break
 		}
 		if err != nil {
-			c.String(200, "err:"+err.Error())
+			c.JSON(200,gin.H{
+				"lastMsg":lastMsg,
+				"err":err.Error(),
+			})
 			break
 		}
 		id := fmt.Sprintf("chatcmpl-%d", time.Now().Unix())

@@ -29,15 +29,16 @@ func Cors() gin.HandlerFunc {
 }
 
 func main() {
-
+	apiKey := os.Getenv("API_KEY")
+	service.IngoreSystemPrompt=os.Getenv("Ingore_System_Prompt")=="YES" || os.Getenv("Ingore_System_Prompt")=="yes"
+	log.Println(apiKey)
+	log.Println(service.IngoreSystemPrompt)
 	r := gin.Default()
 	r.Use(Cors())
 	r.GET("/", func(context *gin.Context) {
 		context.String(200, "部署成功！[https://github.com/sxz799/gemini2chatgpt]")
 	})
 	r.POST("v1/chat/completions", func(c *gin.Context) {
-		
-		apiKey := os.Getenv("API_KEY")
 		if apiKey == "" {
 			auth := c.GetHeader("Authorization")
 			if len(strings.Split(auth, " ")) != 2 {
@@ -48,7 +49,6 @@ func main() {
 			}
 			apiKey = strings.Split(auth, " ")[1]
 		}
-		log.Println(apiKey)
 		var originBody model.ChatGPTRequestBody
 		err := c.BindJSON(&originBody)
 		if err != nil {

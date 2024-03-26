@@ -48,12 +48,15 @@ curl --request POST \
 }'
 ```
 
-## 关于API_KEY
+## 关于环境变量
+
+### API_KEY
 
 程序会优先在环境变量中读取`API_KEY`  
 如果没有找到才会从请求头中读取 
 
-  
+### Ingore_System_Prompt
+将环境变量`Ingore_System_Prompt`设置为 YES 或 yes 程序会忽略角色为`system`的Prompt  
 
 ## 使用docker
 

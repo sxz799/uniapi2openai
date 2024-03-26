@@ -15,6 +15,8 @@ import (
 	"google.golang.org/api/option"
 )
 
+var IngoreSystemPrompt bool
+
 func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context) {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
@@ -25,55 +27,59 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 	gModel := client.GenerativeModel("gemini-pro")
 	cs := gModel.StartChat()
 	cs.History = []*genai.Content{}
-	lastMsg := ""
-	lastRole := ""
+	if len(openaiBody.Messages) < 1 {
+		c.JSON(200, gin.H{
+			"err": "会话不可为空",
+		})
+	}
+	var lastMsg string
+	var lastRole string
 	for i, msg := range openaiBody.Messages {
-		content := msg.Content
-		role := msg.Role
-		// 最后一条消息不写入历史记录 而是用于下一次请求
-		if i == len(openaiBody.Messages)-1 {
-			lastMsg = content
-			break
-		}
-		// 处理system的默认提示词
 		if msg.Role == "system" {
-			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(content)}, Role: "user"})
-			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text("ok")}, Role: "model"})
-			lastRole="model"
-			continue
+			if IngoreSystemPrompt {
+				openaiBody.Messages[i].Content = "你好!"
+			}
+			openaiBody.Messages[i].Role = "user"
 		}
 		// 将assistant角色替换为model
 		if msg.Role == "assistant" {
-			role = "model"
+			openaiBody.Messages[i].Role = "model"
 		}
-		if lastRole=="user" && role=="user" {
-			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text("ok")}, Role: "model"})
+	}
+	for i, msg := range openaiBody.Messages {
+		if i==0 && msg.Role!="user"{
+			c.JSON(200, gin.H{
+				"err": "第一条会话必须是用户发起",
+			})
+			return
 		}
-		if lastRole=="model" && role=="model" {
-			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text("ok")}, Role: "user"})
+		if msg.Role=="user"{
+			lastMsg=lastMsg+msg.Content
+		}else {
+			lastMsg=""
 		}
+		if i==len(openaiBody.Messages)-1{
+			break
+		}
+		if msg.Role!=lastRole{
+			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(msg.Content)}, Role: msg.Role})
+		}else{
+			cs.History[len(cs.History)-1].Parts = append(cs.History[len(cs.History)-1].Parts,[]genai.Part{genai.Text(msg.Content)} ...)
+		}
+		lastRole=msg.Role
+	}
 	
-		cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(content)}, Role: role})
-		lastRole=role
+	if cs.History[len(cs.History)-1].Role=="user"{
+		cs.History=cs.History[:len(cs.History)-1]
 	}
 
-	if lastRole=="user" {
-		cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text("ok")}, Role: "model"})
+	// cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(content)}, Role: role})
+
+	for _, hs := range cs.History {
+		fmt.Println(hs.Role, ":", hs.Parts)
 	}
-
-	/* 2024年03月26日16:38:35 上面的逻辑是因为gemini的历史记录必须是
-	user:你是谁
-	model:我是gemini
-	user:你出道多久了
-	model:两年半
-
-	如果是下面的样子就会报错
-	user:你是谁
-	user:你能做什么
-	model:我是gemini
-	user:你出道多久了
-	model:两年半
-	*/
+	fmt.Println("lastMsg:",lastMsg)
+	fmt.Println("==========")
 
 	if openaiBody.Stream {
 		//支持 SSE特性
@@ -91,19 +97,21 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg stri
 		id := fmt.Sprintf("chatcmpl-%d", time.Now().Unix())
 		resp, err := iter.Next()
 		if errors.Is(err, iterator.Done) {
-			var tChatCompletionChunk model.ChatCompletionChunk
-			tChatCompletionChunk.ID=id
-			tChatCompletionChunk.Model="gemini-pro"
-			tChatCompletionChunk.Created=time.Now().Unix()
-			tChatCompletionChunk.Object=  "chat.completion.chunk"
-			str:="stop"
+			str := "stop"
 			cc := model.ChoiceChunk{
-				FinishReason : &str,
-				Index: 0,
+				FinishReason: &str,
+				Index:        0,
 			}
-			tChatCompletionChunk.Choices=[]model.ChoiceChunk{cc}
+			tChatCompletionChunk := model.ChatCompletionChunk{
+				ID:      id,
+				Model:   "gemini-pro",
+				Created: time.Now().Unix(),
+				Object:  "chat.completion.chunk",
+				Choices: []model.ChoiceChunk{cc},
+			}
+
 			marshal, _ := json.Marshal(tChatCompletionChunk)
-			_, _ = c.Writer.WriteString(fmt.Sprintf("data: %s\n",marshal))
+			_, _ = c.Writer.WriteString(fmt.Sprintf("data: %s\n\n", marshal))
 			_, _ = c.Writer.WriteString("data: [DONE]\n")
 			c.Writer.Flush()
 			break
@@ -115,7 +123,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg stri
 			})
 			break
 		}
-		
+
 		for _, candidate := range resp.Candidates {
 			for _, p := range candidate.Content.Parts {
 				str := fmt.Sprintf("%s", p)

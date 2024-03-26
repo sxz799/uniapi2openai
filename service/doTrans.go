@@ -69,8 +69,11 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 		lastRole=msg.Role
 	}
 	
-	if cs.History[len(cs.History)-1].Role=="user"{
+	if len(cs.History)>1 && cs.History[len(cs.History)-1].Role=="user"{
 		cs.History=cs.History[:len(cs.History)-1]
+	}
+	if len(cs.History)==1{
+		cs.History=[]*genai.Content{}
 	}
 
 	// cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(content)}, Role: role})

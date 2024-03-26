@@ -19,6 +19,8 @@ apikey填写Google gemini的api
 推荐使用[Render](https://dashboard.render.com/)部署
 
 
+
+
 ### Render部署方法
 
 [详细教程](https://blog.sxz799.xyz/posts/%E6%8A%80%E5%B7%A7/2023-12-19%E8%AE%A9chatgpt%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%94%A8%E4%B8%8Agoogle%E5%AE%B6%E7%9A%84gemini-pro%E6%A8%A1%E5%9E%8B/)  
@@ -45,6 +47,11 @@ curl --request POST \
   "stream": true
 }'
 ```
+
+## 关于API_KEY
+
+程序会优先在环境变量中读取`API_KEY`  
+如果没有找到才会从请求头中读取 
 
   
 

@@ -36,9 +36,9 @@ func main() {
 		context.String(200, "部署成功！[https://github.com/sxz799/gemini2chatgpt]")
 	})
 	r.POST("v1/chat/completions", func(c *gin.Context) {
-		var apiKey string
-		envApi := os.Getenv("API_KEY")
-		if envApi == "" {
+		
+		apiKey := os.Getenv("API_KEY")
+		if apiKey == "" {
 			auth := c.GetHeader("Authorization")
 			if len(strings.Split(auth, " ")) != 2 {
 				c.JSON(400, gin.H{
@@ -48,7 +48,7 @@ func main() {
 			}
 			apiKey = strings.Split(auth, " ")[1]
 		}
-
+		log.Println(apiKey)
 		var originBody model.ChatGPTRequestBody
 		err := c.BindJSON(&originBody)
 		if err != nil {

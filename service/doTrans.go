@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github/sxz799/gemini2chatgpt/model"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -27,27 +26,54 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 	cs := gModel.StartChat()
 	cs.History = []*genai.Content{}
 	lastMsg := ""
+	lastRole := ""
 	for i, msg := range openaiBody.Messages {
-		// 忽略 chat-next-web的默认提示词 You are ChatGPT, a large language model trained by OpenAI.\nCarefully heed the user's instructions. \nRespond using Markdown.
-		if msg.Role == "system" && strings.Contains(msg.Content,"You are ChatGPT") {
-			continue
-		}
 		content := msg.Content
-		role:=msg.Role
-		// 将assistant角色替换为model
-		if msg.Role == "assistant" {
-			role = "model"
-		}
-		if msg.Role == "system" {
-			role = "user"
-		}
+		role := msg.Role
 		// 最后一条消息不写入历史记录 而是用于下一次请求
 		if i == len(openaiBody.Messages)-1 {
 			lastMsg = content
 			break
 		}
+		// 处理system的默认提示词
+		if msg.Role == "system" {
+			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(content)}, Role: "user"})
+			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text("ok")}, Role: "model"})
+			lastRole="model"
+			continue
+		}
+		// 将assistant角色替换为model
+		if msg.Role == "assistant" {
+			role = "model"
+		}
+		if lastRole=="user" && role=="user" {
+			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text("ok")}, Role: "model"})
+		}
+		if lastRole=="model" && role=="model" {
+			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text("ok")}, Role: "user"})
+		}
+	
 		cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(content)}, Role: role})
+		lastRole=role
 	}
+
+	if lastRole=="user" {
+		cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text("ok")}, Role: "model"})
+	}
+
+	/* 2024年03月26日16:38:35 上面的逻辑是因为gemini的历史记录必须是
+	user:你是谁
+	model:我是gemini
+	user:你出道多久了
+	model:两年半
+
+	如果是下面的样子就会报错
+	user:你是谁
+	user:你能做什么
+	model:我是gemini
+	user:你出道多久了
+	model:两年半
+	*/
 
 	if openaiBody.Stream {
 		//支持 SSE特性
@@ -62,20 +88,34 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg string, c *gin.Context) {
 	iter := cs.SendMessageStream(ctx, genai.Text(lastMsg))
 	for {
+		id := fmt.Sprintf("chatcmpl-%d", time.Now().Unix())
 		resp, err := iter.Next()
 		if errors.Is(err, iterator.Done) {
+			var tChatCompletionChunk model.ChatCompletionChunk
+			tChatCompletionChunk.ID=id
+			tChatCompletionChunk.Model="gemini-pro"
+			tChatCompletionChunk.Created=time.Now().Unix()
+			tChatCompletionChunk.Object=  "chat.completion.chunk"
+			str:="stop"
+			cc := model.ChoiceChunk{
+				FinishReason : &str,
+				Index: 0,
+			}
+			tChatCompletionChunk.Choices=[]model.ChoiceChunk{cc}
+			marshal, _ := json.Marshal(tChatCompletionChunk)
+			_, _ = c.Writer.WriteString(fmt.Sprintf("data: %s\n",marshal))
 			_, _ = c.Writer.WriteString("data: [DONE]\n")
 			c.Writer.Flush()
 			break
 		}
 		if err != nil {
-			c.JSON(200,gin.H{
-				"lastMsg":lastMsg,
-				"err":err.Error(),
+			c.JSON(200, gin.H{
+				"lastMsg": lastMsg,
+				"err":     err.Error(),
 			})
 			break
 		}
-		id := fmt.Sprintf("chatcmpl-%d", time.Now().Unix())
+		
 		for _, candidate := range resp.Candidates {
 			for _, p := range candidate.Content.Parts {
 				str := fmt.Sprintf("%s", p)

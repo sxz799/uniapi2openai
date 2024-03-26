@@ -2,15 +2,17 @@
 
 ## 介绍
 一个简单的小工具,将gemini的api转为chatgpt的api  
-方便让各种chatgpt的b端或c端gpt应用[[ChatGPT-Next-Web](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web)]方便的使用gemini模型  
+方便让各种chatgpt的b端或c端gpt应用[[ChatGPT-Next-Web](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web)]
+方便使用gemini模型  
 
-详细
 
 ## 使用方法
 
 将程序部署到一台可以连接google的服务器上
 
 将聊天程序的自定义接口设置为你服务器的地址  
+
+只映射了'/v1/chat/completions' 接口
 
 apikey填写Google gemini的api
 

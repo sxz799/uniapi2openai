@@ -13,8 +13,7 @@
 将聊天程序的自定义接口设置为你服务器的地址  
 
 只映射了'/v1/chat/completions' 接口
-
-apikey填写Google gemini的api
+如果没有在环境变量中设置API_KEY 则需要在请求头中添加Gemini API
 
 推荐使用[Render](https://dashboard.render.com/)部署
 
@@ -52,11 +51,11 @@ curl --request POST \
 
 ### API_KEY
 
-程序会优先在环境变量中读取`API_KEY`  
-如果没有找到才会从请求头中读取 
+程序会优先在请求头中读取token
+如果没有找到才会从环境变量中读取`API_KEY`  
 
-### Ingore_System_Prompt
-将环境变量`Ingore_System_Prompt`设置为 YES 或 yes 程序会忽略角色为`system`的Prompt  
+### INGORE_SYSTEM_PROMPT
+将环境变量`INGORE_SYSTEM_PROMPT`设置为 YES 或 yes 程序会忽略角色为`system`的Prompt  
 
 ## 使用docker
 

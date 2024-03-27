@@ -47,42 +47,42 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 		}
 	}
 	for i, msg := range openaiBody.Messages {
-		if i==0 && msg.Role!="user"{
+		if i == 0 && msg.Role != "user" {
 			c.JSON(200, gin.H{
 				"err": "第一条会话必须是用户发起",
 			})
 			return
 		}
-		if msg.Role=="user"{
-			lastMsg=lastMsg+msg.Content
-		}else {
-			lastMsg=""
+		if msg.Role == "user" {
+			lastMsg = lastMsg + msg.Content
+		} else {
+			lastMsg = ""
 		}
-		if i==len(openaiBody.Messages)-1{
+		if i == len(openaiBody.Messages)-1 {
 			break
 		}
-		if msg.Role!=lastRole{
+		if msg.Role != lastRole {
 			cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(msg.Content)}, Role: msg.Role})
-		}else{
-			cs.History[len(cs.History)-1].Parts = append(cs.History[len(cs.History)-1].Parts,[]genai.Part{genai.Text(msg.Content)} ...)
+		} else {
+			cs.History[len(cs.History)-1].Parts = append(cs.History[len(cs.History)-1].Parts, []genai.Part{genai.Text(msg.Content)}...)
 		}
-		lastRole=msg.Role
-	}
-	
-	if len(cs.History)>1 && cs.History[len(cs.History)-1].Role=="user"{
-		cs.History=cs.History[:len(cs.History)-1]
-	}
-	if len(cs.History)==1{
-		cs.History=[]*genai.Content{}
+		lastRole = msg.Role
 	}
 
-	// cs.History = append(cs.History, &genai.Content{Parts: []genai.Part{genai.Text(content)}, Role: role})
+	if len(cs.History) > 1 && cs.History[len(cs.History)-1].Role == "user" {
+		cs.History = cs.History[:len(cs.History)-1]
+	}
+	if len(cs.History) == 1 {
+		cs.History = []*genai.Content{}
+	}
 
+	fmt.Println("======历史记录======")
 	for _, hs := range cs.History {
 		fmt.Println(hs.Role, ":", hs.Parts)
 	}
-	fmt.Println("lastMsg:",lastMsg)
-	fmt.Println("==========")
+	fmt.Println("====================")
+	fmt.Println("user:", lastMsg)
+	fmt.Println("====================")
 
 	if openaiBody.Stream {
 		//支持 SSE特性

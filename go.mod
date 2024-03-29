@@ -1,4 +1,4 @@
-module github/sxz799/gemini2chatgpt
+module github.com/sxz799/gemini2chatgpt
 
 go 1.21
 

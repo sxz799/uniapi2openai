@@ -1,11 +1,10 @@
-package service
+package main
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github/sxz799/gemini2chatgpt/model"
 	"log"
 	"time"
 
@@ -15,16 +14,23 @@ import (
 	"google.golang.org/api/option"
 )
 
-var IngoreSystemPrompt bool
 
-func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context) {
+func DoTrans(ingoreSystemPrompt bool,apiKey string, c *gin.Context) {
+	var openaiBody ChatGPTRequestBody
+	err := c.BindJSON(&openaiBody)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"error": "Request body is invalid",
+		})
+		return
+	}
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer client.Close()
-	modelName:=openaiBody.Model
+	modelName := openaiBody.Model
 	gModel := client.GenerativeModel(modelName)
 	cs := gModel.StartChat()
 	cs.History = []*genai.Content{}
@@ -37,7 +43,7 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 	var lastRole string
 	for i, msg := range openaiBody.Messages {
 		if msg.Role == "system" {
-			if IngoreSystemPrompt {
+			if ingoreSystemPrompt {
 				openaiBody.Messages[i].Content = "你好!"
 			}
 			openaiBody.Messages[i].Role = "user"
@@ -89,29 +95,29 @@ func DoTrans(apiKey string, openaiBody model.ChatGPTRequestBody, c *gin.Context)
 		//支持 SSE特性
 		c.Writer.Header().Set("Transfer-Encoding", "chunked")
 		c.Writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
-		sendStreamResponse(cs, ctx, lastMsg, modelName,c)
+		sendStreamResponse(cs, ctx, lastMsg, modelName, c)
 	} else {
-		sendSingleResponse(cs, ctx, lastMsg, modelName,c)
+		sendSingleResponse(cs, ctx, lastMsg, modelName, c)
 	}
 }
 
-func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg,modelName string, c *gin.Context) {
+func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, modelName string, c *gin.Context) {
 	iter := cs.SendMessageStream(ctx, genai.Text(lastMsg))
 	for {
 		id := fmt.Sprintf("chatcmpl-%d", time.Now().Unix())
 		resp, err := iter.Next()
 		if errors.Is(err, iterator.Done) {
 			str := "stop"
-			cc := model.ChoiceChunk{
+			cc := ChoiceChunk{
 				FinishReason: &str,
 				Index:        0,
 			}
-			tChatCompletionChunk := model.ChatCompletionChunk{
+			tChatCompletionChunk := ChatCompletionChunk{
 				ID:      id,
 				Model:   "gemini-pro",
 				Created: time.Now().Unix(),
 				Object:  "chat.completion.chunk",
-				Choices: []model.ChoiceChunk{cc},
+				Choices: []ChoiceChunk{cc},
 			}
 
 			marshal, _ := json.Marshal(tChatCompletionChunk)
@@ -131,7 +137,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg,mode
 		for _, candidate := range resp.Candidates {
 			for _, p := range candidate.Content.Parts {
 				str := fmt.Sprintf("%s", p)
-				chunk := model.NewChatCompletionChunk(id, str, modelName)
+				chunk := NewChatCompletionChunk(id, str, modelName)
 				marshal, _ := json.Marshal(chunk)
 				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
 				if err != nil {
@@ -143,7 +149,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg,mode
 	}
 }
 
-func sendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg,modelName string, c *gin.Context) {
+func sendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, modelName string, c *gin.Context) {
 	resp, err := cs.SendMessage(ctx, genai.Text(lastMsg))
 	if err != nil {
 		c.String(200, "SendMessage Error:", err.Error())
@@ -155,7 +161,7 @@ func sendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg,mode
 	}
 	part := resp.Candidates[0].Content.Parts[0]
 	str := fmt.Sprintf("%s", part)
-	cc := model.NewChatCompletion(str, modelName)
+	cc := NewChatCompletion(str, modelName)
 	marshal, _ := json.Marshal(cc)
 	_, err = c.Writer.Write(marshal)
 	if err != nil {

@@ -1,27 +1,22 @@
 package main
 
 import (
-	"github/sxz799/gemini2chatgpt/model"
-	"github/sxz799/gemini2chatgpt/service"
+
 	"log"
-	"net/http"
 	"os"
 	"strings"
-
 	"github.com/gin-gonic/gin"
 )
-
-
 
 func main() {
 	apiKey := os.Getenv("API_KEY")
 	servePort := os.Getenv("SERVE_PORT")
-	if servePort==""{
-		servePort="8080"
+	if servePort == "" {
+		servePort = "8080"
 	}
-	service.IngoreSystemPrompt = os.Getenv("INGORE_SYSTEM_PROMPT") == "YES" || os.Getenv("INGORE_SYSTEM_PROMPT") == "yes"
-	log.Println("API_KEY:",apiKey)
-	log.Println("INGORE_SYSTEM_PROMPT:",service.IngoreSystemPrompt)
+	ingoreSystemPrompt := os.Getenv("INGORE_SYSTEM_PROMPT") == "YES" || os.Getenv("INGORE_SYSTEM_PROMPT") == "yes"
+	log.Println("API_KEY:", apiKey)
+	log.Println("INGORE_SYSTEM_PROMPT:", ingoreSystemPrompt)
 	r := gin.Default()
 	r.Use(Cors())
 	r.GET("/", func(context *gin.Context) {
@@ -40,42 +35,17 @@ func main() {
 			apiKey = strings.Split(auth, " ")[1]
 		}
 
-		var originBody model.ChatGPTRequestBody
-		err := c.BindJSON(&originBody)
-		if err != nil {
-			c.JSON(400, gin.H{
-				"error": "Request body is invalid",
-			})
-			return
-		}
-		service.DoTrans(apiKey, originBody, c)
+		DoTrans(ingoreSystemPrompt,apiKey, c)
 	})
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"msg": "仅代理了`v1/chat/completions`接口",
 		})
 	})
-	err := r.Run(":"+servePort)
+	err := r.Run(":" + servePort)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 
-
-func Cors() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		method := c.Request.Method
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "*")
-		c.Header("Access-Control-Allow-Headers", "*")
-		c.Header("Access-Control-Expose-Headers", "*")
-		c.Header("Access-Control-Allow-Credentials", "true")
-		//放行所有OPTIONS方法
-		if method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-		}
-		// 处理请求
-		c.Next()
-	}
-}

@@ -17,10 +17,14 @@
 
 推荐使用[Render](https://dashboard.render.com/)部署
 
+## 交叉编译
+
+```
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o gemini2chatgpt
+```
 
 
-
-### Render部署方法
+### Render部署方法[已不再支持免费部署]
 
 [详细教程](https://blog.sxz799.xyz/posts/%E6%8A%80%E5%B7%A7/2023-12-19%E8%AE%A9chatgpt%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%94%A8%E4%B8%8Agoogle%E5%AE%B6%E7%9A%84gemini-pro%E6%A8%A1%E5%9E%8B/)  
 New-> Web Service -> Deploy an existing image from a registry -> Image URL填写`sxz799/gemini2chatgpt:latest`

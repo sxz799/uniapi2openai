@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github/sxz799/gemini2chatgpt/gemini2chatgpt"
+	"github.com/sxz799/gemini2chatgpt/gemini2chatgpt"
 	"log"
 	"net/http"
 	"os"

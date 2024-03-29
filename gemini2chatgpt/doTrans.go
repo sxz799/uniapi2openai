@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github/sxz799/gemini2chatgpt/model"
+	"github.com/sxz799/gemini2chatgpt/model"
 	"log"
 	"time"
 

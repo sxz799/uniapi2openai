@@ -1,6 +1,6 @@
 module github.com/sxz799/gemini2chatgpt
 
-go 1.21
+go 1.22.1
 
 require (
 	github.com/gin-gonic/gin v1.9.1

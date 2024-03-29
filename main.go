@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github/sxz799/gemini2chatgpt/gemini2chatgpt"
 	"log"
 	"net/http"
 	"os"
@@ -50,7 +51,7 @@ func main() {
 			apiKey = strings.Split(auth, " ")[1]
 		}
 
-		DoTrans(ingoreSystemPrompt,apiKey, c)
+		gemini2chatgpt.DoTrans(ingoreSystemPrompt,apiKey, c)
 	})
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(200, gin.H{

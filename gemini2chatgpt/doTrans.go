@@ -1,10 +1,11 @@
-package main
+package gemini2chatgpt
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github/sxz799/gemini2chatgpt/model"
 	"log"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 
 
 func DoTrans(ingoreSystemPrompt bool,apiKey string, c *gin.Context) {
-	var openaiBody ChatGPTRequestBody
+	var openaiBody model.ChatGPTRequestBody
 	err := c.BindJSON(&openaiBody)
 	if err != nil {
 		c.JSON(400, gin.H{
@@ -108,16 +109,16 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 		resp, err := iter.Next()
 		if errors.Is(err, iterator.Done) {
 			str := "stop"
-			cc := ChoiceChunk{
+			cc := model.ChoiceChunk{
 				FinishReason: &str,
 				Index:        0,
 			}
-			tChatCompletionChunk := ChatCompletionChunk{
+			tChatCompletionChunk := model.ChatCompletionChunk{
 				ID:      id,
 				Model:   "gemini-pro",
 				Created: time.Now().Unix(),
 				Object:  "chat.completion.chunk",
-				Choices: []ChoiceChunk{cc},
+				Choices: []model.ChoiceChunk{cc},
 			}
 
 			marshal, _ := json.Marshal(tChatCompletionChunk)
@@ -137,7 +138,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 		for _, candidate := range resp.Candidates {
 			for _, p := range candidate.Content.Parts {
 				str := fmt.Sprintf("%s", p)
-				chunk := newChatCompletionChunk(id, str, modelName)
+				chunk := model.NewChatCompletionChunk(id, str, modelName)
 				marshal, _ := json.Marshal(chunk)
 				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
 				if err != nil {
@@ -161,7 +162,7 @@ func sendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 	}
 	part := resp.Candidates[0].Content.Parts[0]
 	str := fmt.Sprintf("%s", part)
-	cc := newChatCompletion(str, modelName)
+	cc := model.NewChatCompletion(str, modelName)
 	marshal, _ := json.Marshal(cc)
 	_, err = c.Writer.Write(marshal)
 	if err != nil {

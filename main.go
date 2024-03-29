@@ -1,10 +1,11 @@
 package main
 
 import (
-
 	"log"
+	"net/http"
 	"os"
 	"strings"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +19,21 @@ func main() {
 	log.Println("API_KEY:", apiKey)
 	log.Println("INGORE_SYSTEM_PROMPT:", ingoreSystemPrompt)
 	r := gin.Default()
-	r.Use(Cors())
+	cors:=func(c *gin.Context) {
+		method := c.Request.Method
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "*")
+		c.Header("Access-Control-Allow-Headers", "*")
+		c.Header("Access-Control-Expose-Headers", "*")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		//放行所有OPTIONS方法
+		if method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+		}
+		// 处理请求
+		c.Next()
+	}
+	r.Use(cors)
 	r.GET("/", func(context *gin.Context) {
 		context.String(200, "部署成功！[https://github.com/sxz799/gemini2chatgpt]")
 	})

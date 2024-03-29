@@ -137,7 +137,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 		for _, candidate := range resp.Candidates {
 			for _, p := range candidate.Content.Parts {
 				str := fmt.Sprintf("%s", p)
-				chunk := NewChatCompletionChunk(id, str, modelName)
+				chunk := newChatCompletionChunk(id, str, modelName)
 				marshal, _ := json.Marshal(chunk)
 				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
 				if err != nil {
@@ -161,7 +161,7 @@ func sendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 	}
 	part := resp.Candidates[0].Content.Parts[0]
 	str := fmt.Sprintf("%s", part)
-	cc := NewChatCompletion(str, modelName)
+	cc := newChatCompletion(str, modelName)
 	marshal, _ := json.Marshal(cc)
 	_, err = c.Writer.Write(marshal)
 	if err != nil {

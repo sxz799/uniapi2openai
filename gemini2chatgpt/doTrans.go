@@ -15,8 +15,14 @@ import (
 	"google.golang.org/api/option"
 )
 
-
-func DoTrans(ingoreSystemPrompt bool,apiKey string, c *gin.Context) {
+/**
+ * @Description: DoTrans 用于处理将通用 OPENAI 请求转换为Google Gemini请求并将结果转为OPENAI输出
+ * @param ingoreSystemPrompt 是否忽略系统Prompt
+ * @param customUrl 自定义代理地址 不使用可填空字符串
+ * @param apiKey Gemini的API_KEY
+ * @param c c
+ */
+func DoTrans(ingoreSystemPrompt bool, customUrl, apiKey string, c *gin.Context) {
 	var openaiBody model.ChatGPTRequestBody
 	err := c.BindJSON(&openaiBody)
 	if err != nil {
@@ -26,7 +32,12 @@ func DoTrans(ingoreSystemPrompt bool,apiKey string, c *gin.Context) {
 		return
 	}
 	ctx := context.Background()
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	clientOptinApi := option.WithAPIKey(apiKey)
+	if customUrl == "" {
+		customUrl = "https://generativelanguage.googleapis.com"
+	}
+	clientOptinUrl := option.WithEndpoint(customUrl)
+	client, err := genai.NewClient(ctx, clientOptinApi, clientOptinUrl)
 	if err != nil {
 		log.Fatal(err)
 	}

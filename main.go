@@ -50,8 +50,7 @@ func main() {
 		} else {
 			apiKey = strings.Split(auth, " ")[1]
 		}
-
-		gemini2chatgpt.DoTrans(ingoreSystemPrompt,apiKey, c)
+		gemini2chatgpt.DoTrans(ingoreSystemPrompt,"",apiKey, c)
 	})
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(200, gin.H{

@@ -15,7 +15,8 @@ import (
 	"google.golang.org/api/option"
 )
 
-/**
+// DoTrans
+/*
  * @Description: DoTrans 用于处理将通用 OPENAI 请求转换为Google Gemini请求并将结果转为OPENAI输出
  * @param ingoreSystemPrompt 是否忽略系统Prompt
  * @param customUrl 自定义代理地址 不使用可填空字符串
@@ -95,13 +96,13 @@ func DoTrans(ingoreSystemPrompt bool, customUrl, apiKey string, c *gin.Context) 
 		cs.History = []*genai.Content{}
 	}
 
-	fmt.Println("======历史记录======")
-	for _, hs := range cs.History {
-		fmt.Println(hs.Role, ":", hs.Parts)
-	}
-	fmt.Println("====================")
-	fmt.Println("user:", lastMsg)
-	fmt.Println("====================")
+	//fmt.Println("======历史记录======")
+	//for _, hs := range cs.History {
+	//	fmt.Println(hs.Role, ":", hs.Parts)
+	//	fmt.Println("====================")
+	//}
+	//fmt.Println("user[last]:", lastMsg)
+	//fmt.Println("====================")
 
 	if openaiBody.Stream {
 		//支持 SSE特性
@@ -126,7 +127,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 			}
 			tChatCompletionChunk := model.ChatCompletionChunk{
 				ID:      id,
-				Model:   "gemini-pro",
+				Model:   modelName,
 				Created: time.Now().Unix(),
 				Object:  "chat.completion.chunk",
 				Choices: []model.ChoiceChunk{cc},
@@ -134,6 +135,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 
 			marshal, _ := json.Marshal(tChatCompletionChunk)
 			_, _ = c.Writer.WriteString(fmt.Sprintf("data: %s\n\n", marshal))
+			c.Writer.Flush()
 			_, _ = c.Writer.WriteString("data: [DONE]\n")
 			c.Writer.Flush()
 			break

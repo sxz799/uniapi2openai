@@ -20,7 +20,7 @@ func main() {
 	log.Println("API_KEY:", apiKey)
 	log.Println("INGORE_SYSTEM_PROMPT:", ingoreSystemPrompt)
 	r := gin.Default()
-	cors:=func(c *gin.Context) {
+	cors := func(c *gin.Context) {
 		method := c.Request.Method
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "*")
@@ -50,7 +50,7 @@ func main() {
 		} else {
 			apiKey = strings.Split(auth, " ")[1]
 		}
-		gemini2chatgpt.DoTrans(ingoreSystemPrompt,"",apiKey, c)
+		gemini2chatgpt.DoTrans(ingoreSystemPrompt, "https://gemini.sxz799.top", apiKey, c)
 	})
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -62,5 +62,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-

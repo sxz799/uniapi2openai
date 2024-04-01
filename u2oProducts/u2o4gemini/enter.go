@@ -94,14 +94,6 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 		cs.History = []*genai.Content{}
 	}
 
-	//fmt.Println("======历史记录======")
-	//for _, hs := range cs.History {
-	//	fmt.Println(hs.Role, ":", hs.Parts)
-	//	fmt.Println("====================")
-	//}
-	//fmt.Println("user[last]:", lastMsg)
-	//fmt.Println("====================")
-
 	if openaiBody.Stream {
 		//支持 SSE特性
 		c.Writer.Header().Set("Transfer-Encoding", "chunked")

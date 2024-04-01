@@ -61,62 +61,64 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 	c.Writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
-
-	lastMsg := ""
 	sessionId := ""
-	for {
-		buf := make([]byte, 8192)
-		n, bodyErr := resp.Body.Read(buf)
-		if bodyErr != nil {
-			break
-		}
-		var str = string(buf[:n])
 
-		fmt.Println(str)
+	msgChan := make(chan string, 10)
 
-		str = strings.ReplaceAll(str, "\n", "")
+	go func() {
+		defer close(msgChan)
+		lastMsg := ""
+		for {
+			buf := make([]byte, 8192)
+			n, bodyErr := resp.Body.Read(buf)
+			if bodyErr != nil {
+				break
+			}
+			var str = string(buf[:n])
+			str = strings.ReplaceAll(str, "\n", "")
+			//截取{之后的内容
+			index := strings.Index(str, "{")
+			if index > 0 {
+				str = str[index:]
+			}
+			var tongYiWebRespBody TongYiWebRespBody
+			_ = json.Unmarshal([]byte(str), &tongYiWebRespBody)
+			if sessionId == "" {
+				sessionId = tongYiWebRespBody.SessionID
+			}
+			if len(tongYiWebRespBody.Contents) < 1 {
+				continue
+			}
+			tMsg := tongYiWebRespBody.Contents[0].Content
+			tMsg2 := strings.TrimLeft(tMsg, lastMsg)
+			if tMsg2 == "" && tongYiWebRespBody.StopReason != "stop" {
+				continue
+			}
+			id := tongYiWebRespBody.MsgID
+			chunk := model.NewChatCompletionChunk(id, tMsg2, "qwen-web")
+			chunkBytes, _ := json.Marshal(chunk)
+			msgChan <- fmt.Sprintf("data: %s\n\n", chunkBytes)
 
-		//截取{之后的内容
-		index := strings.Index(str, "{")
+			if tongYiWebRespBody.StopReason == "stop" {
+				tChunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)
+				tMarshal, _ := json.Marshal(tChunk)
+				msgChan <- fmt.Sprintf("data: %s\n\n", tMarshal)
+				msgChan <- fmt.Sprintf("data: [DONE]\n")
+				break
+			}
+			lastMsg = tMsg
+		}
+	}()
 
-		if index > 0 {
-			str = str[index:]
-		}
-
-		var tongYiWebRespBody TongYiWebRespBody
-		_ = json.Unmarshal([]byte(str), &tongYiWebRespBody)
-		if sessionId == "" {
-			sessionId = tongYiWebRespBody.SessionID
-		}
-		if len(tongYiWebRespBody.Contents) < 1 {
-			continue
-		}
-		tMsg := tongYiWebRespBody.Contents[0].Content
-		tMsg2 := strings.TrimLeft(tMsg, lastMsg)
-		if tMsg2 == "" && tongYiWebRespBody.StopReason != "stop" {
-			continue
-		}
-		id := tongYiWebRespBody.MsgID
-		chunk := model.NewChatCompletionChunk(id, tMsg2, "qwen-web")
-		chunkBytes, _ := json.Marshal(chunk)
-		_, _ = c.Writer.Write([]byte(fmt.Sprintf("data: %s\n\n", chunkBytes)))
+	for msg := range msgChan {
+		_, _ = c.Writer.WriteString(msg)
 		c.Writer.Flush()
-
-		if tongYiWebRespBody.StopReason == "stop" {
-			tChunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)
-			tMarshal, _ := json.Marshal(tChunk)
-			_, _ = c.Writer.Write([]byte(fmt.Sprintf("data: %s\n\n", tMarshal)))
-			c.Writer.Flush()
-			_, _ = c.Writer.Write([]byte("data: [DONE]\n"))
-			c.Writer.Flush()
-			break
-		}
-		lastMsg = tMsg
 	}
 	go func() {
 		time.Sleep(time.Second * 1)
 		deleteChat(key, sessionId)
 	}()
+
 }
 
 //4. 处理返回结果

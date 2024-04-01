@@ -42,32 +42,35 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 	c.Writer.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
-
-	for {
-		buf := make([]byte, 4096)
-		n, err := resp.Body.Read(buf)
-		if err != nil {
-			break
+	msgChan := make(chan string, 10)
+	go func() {
+		defer close(msgChan)
+		for {
+			buf := make([]byte, 4096)
+			n, err2 := resp.Body.Read(buf)
+			if err2 != nil {
+				break
+			}
+			var str = string(buf[:n])
+			//截取data:之后的内容
+			index := strings.Index(str, "{")
+			if index > 0 {
+				str = str[index:]
+			}
+			result, id, finish := transTongYiResp2OpenAIResp(openaiBody.Model, str)
+			msgChan <- fmt.Sprintf("data: %s\n\n", result)
+			if finish {
+				chunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)
+				marshal, _ := json.Marshal(chunk)
+				msgChan <- fmt.Sprintf("data: %s\n\n", marshal)
+				msgChan <- fmt.Sprintf("data: [DONE]\n")
+				break
+			}
 		}
-		var str = string(buf[:n])
-		//截取data:之后的内容
-		index := strings.Index(str, "data:")
-		if index > 0 {
-			str = str[index+5:]
-		}
-		result, id, finish := transTongYiResp2OpenAIResp(openaiBody.Model, str)
-		_, _ = c.Writer.Write([]byte(fmt.Sprintf("data: %s\n\n", result)))
+	}()
+	for msg := range msgChan {
+		_, _ = c.Writer.WriteString(msg)
 		c.Writer.Flush()
-
-		if finish {
-			chunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)
-			marshal, _ := json.Marshal(chunk)
-			_, _ = c.Writer.Write([]byte(fmt.Sprintf("data: %s\n\n", marshal)))
-			c.Writer.Flush()
-			_, _ = c.Writer.Write([]byte("data: [DONE]\n"))
-			c.Writer.Flush()
-			break
-		}
 	}
 }
 

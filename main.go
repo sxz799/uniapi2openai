@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/sxz799/uniapi2openai/u2o_service"
+	"github.com/sxz799/uniapi2openai/u2oService"
 	"log"
 	"net/http"
 	"os"
@@ -34,7 +34,7 @@ func main() {
 		context.String(200, "部署成功")
 	})
 	r.POST("v1/chat/completions", func(c *gin.Context) {
-		u2o_service.DoTrans(true, c)
+		u2oService.DoTrans(true, c)
 	})
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(200, gin.H{

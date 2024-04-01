@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sxz799/uniapi2openai/u2o_config"
-	"github.com/sxz799/uniapi2openai/u2o_model"
+	"github.com/sxz799/uniapi2openai/config"
+	"github.com/sxz799/uniapi2openai/model"
 	"log"
 	"strings"
 	"time"
@@ -17,7 +17,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-func DoTrans(ignoreSystemPrompt bool, openaiBody u2o_model.OpenaiBody, c *gin.Context) {
+func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Context) {
 	key := c.GetHeader("Authorization")
 	if len(strings.Split(key, " ")) != 2 {
 		if key == "" {
@@ -31,7 +31,7 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody u2o_model.OpenaiBody, c *gin.Co
 	}
 	ctx := context.Background()
 	clientOptionApi := option.WithAPIKey(key)
-	customUrl := u2o_config.GeminiProxyUrl
+	customUrl := config.GeminiProxyUrl
 	if customUrl == "" {
 		customUrl = "https://generativelanguage.googleapis.com"
 	}
@@ -119,16 +119,16 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 		resp, err := iter.Next()
 		if errors.Is(err, iterator.Done) {
 			str := "stop"
-			cc := u2o_model.ChoiceChunk{
+			cc := model.ChoiceChunk{
 				FinishReason: &str,
 				Index:        0,
 			}
-			tChatCompletionChunk := u2o_model.ChatCompletionChunk{
+			tChatCompletionChunk := model.ChatCompletionChunk{
 				ID:      id,
 				Model:   modelName,
 				Created: time.Now().Unix(),
 				Object:  "chat.completion.chunk",
-				Choices: []u2o_model.ChoiceChunk{cc},
+				Choices: []model.ChoiceChunk{cc},
 			}
 
 			marshal, _ := json.Marshal(tChatCompletionChunk)
@@ -149,7 +149,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 		for _, candidate := range resp.Candidates {
 			for _, p := range candidate.Content.Parts {
 				str := fmt.Sprintf("%s", p)
-				chunk := u2o_model.NewChatCompletionChunk(id, str, modelName)
+				chunk := model.NewChatCompletionChunk(id, str, modelName)
 				marshal, _ := json.Marshal(chunk)
 				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
 				if err != nil {
@@ -173,7 +173,7 @@ func sendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 	}
 	part := resp.Candidates[0].Content.Parts[0]
 	str := fmt.Sprintf("%s", part)
-	cc := u2o_model.NewChatCompletion(str, modelName)
+	cc := model.NewChatCompletion(str, modelName)
 	marshal, _ := json.Marshal(cc)
 	_, err = c.Writer.Write(marshal)
 	if err != nil {

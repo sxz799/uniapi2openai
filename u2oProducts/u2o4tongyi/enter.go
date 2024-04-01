@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/sxz799/uniapi2openai/u2o_model"
+	"github.com/sxz799/uniapi2openai/model"
 	"net/http"
 	"strings"
 )
 
-func DoTrans(ignoreSystemPrompt bool, openaiBody u2o_model.OpenaiBody, c *gin.Context) {
+func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Context) {
 	key := c.GetHeader("Authorization")
 	if len(strings.Split(key, " ")) != 2 {
 		if key == "" {
@@ -60,7 +60,7 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody u2o_model.OpenaiBody, c *gin.Co
 		c.Writer.Flush()
 
 		if finish {
-			chunk := u2o_model.NewStopChatCompletionChunk(id, openaiBody.Model)
+			chunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)
 			marshal, _ := json.Marshal(chunk)
 			_, _ = c.Writer.Write([]byte(fmt.Sprintf("data: %s\n\n", marshal)))
 			c.Writer.Flush()
@@ -71,7 +71,7 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody u2o_model.OpenaiBody, c *gin.Co
 	}
 }
 
-func transOpenAIReq2TongYiReq(ignoreSystemPrompt bool, body u2o_model.OpenaiBody) *TongyiBody {
+func transOpenAIReq2TongYiReq(ignoreSystemPrompt bool, body model.OpenaiBody) *TongyiBody {
 	modelName := body.Model
 	tMessages := body.Messages
 	var messages []Message
@@ -106,7 +106,7 @@ func transTongYiResp2OpenAIResp(modelName, origin string) (result, id string, fi
 	//fmt.Println("====================")
 	//fmt.Println(qwResp.Output.Choices[0].Message.Content)
 	//fmt.Println("====================")
-	chunk := u2o_model.NewChatCompletionChunk(qwResp.RequestID, qwResp.Output.Choices[0].Message.Content, modelName)
+	chunk := model.NewChatCompletionChunk(qwResp.RequestID, qwResp.Output.Choices[0].Message.Content, modelName)
 	marshal, _ := json.Marshal(chunk)
 	result = string(marshal)
 	id = qwResp.RequestID

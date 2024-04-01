@@ -1,4 +1,4 @@
-package u2o_model
+package model
 
 import (
 	"fmt"

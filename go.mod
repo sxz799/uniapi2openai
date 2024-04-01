@@ -1,4 +1,4 @@
-module github.com/sxz799/gemini2chatgpt
+module github.com/sxz799/uniapi2openai
 
 go 1.22.1
 

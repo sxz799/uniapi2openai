@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/sxz799/gemini2chatgpt/u2o_service"
+	"github.com/sxz799/uniapi2openai/u2o_service"
 	"log"
 	"net/http"
 	"os"

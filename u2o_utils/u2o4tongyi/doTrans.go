@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/sxz799/gemini2chatgpt/u2o_model"
+	"github.com/sxz799/uniapi2openai/u2o_model"
 	"net/http"
 	"strings"
 )

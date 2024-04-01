@@ -2,10 +2,10 @@ package u2o_service
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/sxz799/gemini2chatgpt/u2o_config"
-	"github.com/sxz799/gemini2chatgpt/u2o_model"
-	"github.com/sxz799/gemini2chatgpt/u2o_utils/u2o4gemini"
-	"github.com/sxz799/gemini2chatgpt/u2o_utils/u2o4tongyi"
+	"github.com/sxz799/uniapi2openai/u2o_config"
+	"github.com/sxz799/uniapi2openai/u2o_model"
+	"github.com/sxz799/uniapi2openai/u2o_utils/u2o4gemini"
+	"github.com/sxz799/uniapi2openai/u2o_utils/u2o4tongyi"
 	"log"
 )
 

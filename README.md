@@ -1,4 +1,4 @@
-# gemini2chatgpt
+# uniapi2openai
 
 ## 介绍
 一个简单的小工具,将不同模型的api转为openai的api
@@ -17,7 +17,7 @@
 ## 交叉编译
 
 ```
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o gemini2chatgpt
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o uniapi2openai
 ```
 
 
@@ -25,7 +25,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o gemini2chatgp
 测试接口
 ```
 curl --request POST \
-  --url https://gemini2chatgpt-xxxxxx.onrender.com/v1/chat/completions \
+  --url https://uniapi2openai-xxxxxx.onrender.com/v1/chat/completions \
   --header 'Authorization: Bearer YOUR_GEMINI_API' \
   --header 'content-type: application/json' \
   --data '{

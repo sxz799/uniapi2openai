@@ -71,6 +71,9 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 			break
 		}
 		var str = string(buf[:n])
+
+		fmt.Println(str)
+
 		str = strings.ReplaceAll(str, "\n", "")
 
 		//截取{之后的内容

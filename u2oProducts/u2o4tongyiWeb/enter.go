@@ -90,7 +90,7 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 		}
 		tMsg := tongYiWebRespBody.Contents[0].Content
 		tMsg2 := strings.TrimLeft(tMsg, lastMsg)
-		if tMsg2 == "" {
+		if tMsg2 == "" && tongYiWebRespBody.StopReason != "stop" {
 			continue
 		}
 		id := tongYiWebRespBody.MsgID

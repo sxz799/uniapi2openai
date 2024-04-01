@@ -1,24 +1,19 @@
 package main
 
 import (
-	"github.com/sxz799/gemini2chatgpt/gemini2chatgpt"
+	"github.com/gin-gonic/gin"
+	"github.com/sxz799/gemini2chatgpt/u2o_service"
 	"log"
 	"net/http"
 	"os"
-	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	apiKey := os.Getenv("API_KEY")
+
 	servePort := os.Getenv("SERVE_PORT")
 	if servePort == "" {
 		servePort = "8080"
 	}
-	ingoreSystemPrompt := os.Getenv("INGORE_SYSTEM_PROMPT") == "YES" || os.Getenv("INGORE_SYSTEM_PROMPT") == "yes"
-	log.Println("API_KEY:", apiKey)
-	log.Println("INGORE_SYSTEM_PROMPT:", ingoreSystemPrompt)
 	r := gin.Default()
 	cors := func(c *gin.Context) {
 		method := c.Request.Method
@@ -36,21 +31,10 @@ func main() {
 	}
 	r.Use(cors)
 	r.GET("/", func(context *gin.Context) {
-		context.String(200, "部署成功！[https://github.com/sxz799/gemini2chatgpt]")
+		context.String(200, "部署成功")
 	})
 	r.POST("v1/chat/completions", func(c *gin.Context) {
-		auth := c.GetHeader("Authorization")
-		if len(strings.Split(auth, " ")) != 2 {
-			if apiKey == "" {
-				c.JSON(400, gin.H{
-					"error": "Authorization header is invalid",
-				})
-				return
-			}
-		} else {
-			apiKey = strings.Split(auth, " ")[1]
-		}
-		gemini2chatgpt.DoTrans(ingoreSystemPrompt, "https://gemini.sxz799.top", apiKey, c)
+		u2o_service.DoTrans(true, c)
 	})
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(200, gin.H{

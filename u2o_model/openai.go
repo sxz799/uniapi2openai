@@ -1,12 +1,11 @@
-package model
+package u2o_model
 
 import (
 	"fmt"
 	"time"
 )
 
-
-type ChatGPTRequestBody struct {
+type OpenaiBody struct {
 	Model    string    `json:"model"`
 	Messages []Message `json:"messages"`
 	Stream   bool      `json:"stream"`
@@ -56,7 +55,7 @@ type ChatCompletionChunk struct {
 	Choices []ChoiceChunk `json:"choices"`
 }
 
-
+// NewChatCompletionChunk 流式输出 chunk
 func NewChatCompletionChunk(id, msg, model string) *ChatCompletionChunk {
 	cc := ChoiceChunk{
 		Delta: Delta{
@@ -74,6 +73,7 @@ func NewChatCompletionChunk(id, msg, model string) *ChatCompletionChunk {
 	}
 }
 
+// NewChatCompletion 单次输出
 func NewChatCompletion(msg, model string) *ChatCompletion {
 	cho := Choice{
 		Message: Message{
@@ -88,4 +88,20 @@ func NewChatCompletion(msg, model string) *ChatCompletion {
 		Model:   model,
 		Choices: []Choice{cho},
 	}
+}
+
+func NewStopChatCompletionChunk(id, modelName string) *ChatCompletionChunk {
+	tStr := "stop"
+	cc := ChoiceChunk{
+		FinishReason: &tStr,
+		Index:        0,
+	}
+	tChatCompletionChunk := ChatCompletionChunk{
+		ID:      id,
+		Model:   modelName,
+		Created: time.Now().Unix(),
+		Object:  "chat.completion.chunk",
+		Choices: []ChoiceChunk{cc},
+	}
+	return &tChatCompletionChunk
 }

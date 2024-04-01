@@ -1,12 +1,14 @@
-package gemini2chatgpt
+package u2o4gemini
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sxz799/gemini2chatgpt/model"
+	"github.com/sxz799/gemini2chatgpt/u2o_config"
+	"github.com/sxz799/gemini2chatgpt/u2o_model"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,30 +17,26 @@ import (
 	"google.golang.org/api/option"
 )
 
-// DoTrans
-/*
- * @Description: DoTrans 用于处理将通用 OPENAI 请求转换为Google Gemini请求并将结果转为OPENAI输出
- * @param ingoreSystemPrompt 是否忽略系统Prompt
- * @param customUrl 自定义代理地址 不使用可填空字符串
- * @param apiKey Gemini的API_KEY
- * @param c c
- */
-func DoTrans(ingoreSystemPrompt bool, customUrl, apiKey string, c *gin.Context) {
-	var openaiBody model.ChatGPTRequestBody
-	err := c.BindJSON(&openaiBody)
-	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "Request body is invalid",
-		})
-		return
+func DoTrans(ignoreSystemPrompt bool, openaiBody u2o_model.OpenaiBody, c *gin.Context) {
+	key := c.GetHeader("Authorization")
+	if len(strings.Split(key, " ")) != 2 {
+		if key == "" {
+			c.JSON(400, gin.H{
+				"error": "Authorization header is invalid",
+			})
+			return
+		}
+	} else {
+		key = strings.Split(key, " ")[1]
 	}
 	ctx := context.Background()
-	clientOptinApi := option.WithAPIKey(apiKey)
+	clientOptionApi := option.WithAPIKey(key)
+	customUrl := u2o_config.GeminiProxyUrl
 	if customUrl == "" {
 		customUrl = "https://generativelanguage.googleapis.com"
 	}
-	clientOptinUrl := option.WithEndpoint(customUrl)
-	client, err := genai.NewClient(ctx, clientOptinApi, clientOptinUrl)
+	clientOptionUrl := option.WithEndpoint(customUrl)
+	client, err := genai.NewClient(ctx, clientOptionApi, clientOptionUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,7 +54,7 @@ func DoTrans(ingoreSystemPrompt bool, customUrl, apiKey string, c *gin.Context) 
 	var lastRole string
 	for i, msg := range openaiBody.Messages {
 		if msg.Role == "system" {
-			if ingoreSystemPrompt {
+			if ignoreSystemPrompt {
 				openaiBody.Messages[i].Content = "你好!"
 			}
 			openaiBody.Messages[i].Role = "user"
@@ -121,16 +119,16 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 		resp, err := iter.Next()
 		if errors.Is(err, iterator.Done) {
 			str := "stop"
-			cc := model.ChoiceChunk{
+			cc := u2o_model.ChoiceChunk{
 				FinishReason: &str,
 				Index:        0,
 			}
-			tChatCompletionChunk := model.ChatCompletionChunk{
+			tChatCompletionChunk := u2o_model.ChatCompletionChunk{
 				ID:      id,
 				Model:   modelName,
 				Created: time.Now().Unix(),
 				Object:  "chat.completion.chunk",
-				Choices: []model.ChoiceChunk{cc},
+				Choices: []u2o_model.ChoiceChunk{cc},
 			}
 
 			marshal, _ := json.Marshal(tChatCompletionChunk)
@@ -151,7 +149,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 		for _, candidate := range resp.Candidates {
 			for _, p := range candidate.Content.Parts {
 				str := fmt.Sprintf("%s", p)
-				chunk := model.NewChatCompletionChunk(id, str, modelName)
+				chunk := u2o_model.NewChatCompletionChunk(id, str, modelName)
 				marshal, _ := json.Marshal(chunk)
 				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
 				if err != nil {
@@ -175,7 +173,7 @@ func sendSingleResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 	}
 	part := resp.Candidates[0].Content.Parts[0]
 	str := fmt.Sprintf("%s", part)
-	cc := model.NewChatCompletion(str, modelName)
+	cc := u2o_model.NewChatCompletion(str, modelName)
 	marshal, _ := json.Marshal(cc)
 	_, err = c.Writer.Write(marshal)
 	if err != nil {

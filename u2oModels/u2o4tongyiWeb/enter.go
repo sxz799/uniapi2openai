@@ -68,14 +68,18 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 	go func() {
 		defer close(msgChan)
 		lastMsg := ""
+		id := ""
 		for {
 			buf := make([]byte, 8192)
 			n, bodyErr := resp.Body.Read(buf)
 			if bodyErr != nil {
+				tChunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)
+				tMarshal, _ := json.Marshal(tChunk)
+				msgChan <- fmt.Sprintf("data: %s\n\n", tMarshal)
+				msgChan <- fmt.Sprintf("data: [DONE]\n")
 				break
 			}
 			var str = string(buf[:n])
-			str = strings.ReplaceAll(str, "\n", "")
 			//截取{之后的内容
 			index := strings.Index(str, "{")
 			if index > 0 {
@@ -94,18 +98,13 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 			if tMsg2 == "" && tongYiWebRespBody.StopReason != "stop" {
 				continue
 			}
-			id := tongYiWebRespBody.MsgID
+			if id == "" {
+				id = tongYiWebRespBody.MsgID
+			}
+
 			chunk := model.NewChatCompletionChunk(id, tMsg2, "qwen-web")
 			chunkBytes, _ := json.Marshal(chunk)
 			msgChan <- fmt.Sprintf("data: %s\n\n", chunkBytes)
-
-			if tongYiWebRespBody.StopReason == "stop" {
-				tChunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)
-				tMarshal, _ := json.Marshal(tChunk)
-				msgChan <- fmt.Sprintf("data: %s\n\n", tMarshal)
-				msgChan <- fmt.Sprintf("data: [DONE]\n")
-				break
-			}
 			lastMsg = tMsg
 		}
 	}()

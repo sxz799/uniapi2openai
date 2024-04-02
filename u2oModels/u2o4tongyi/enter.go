@@ -45,10 +45,15 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 	msgChan := make(chan string, 10)
 	go func() {
 		defer close(msgChan)
+		id := ""
 		for {
 			buf := make([]byte, 4096)
 			n, err2 := resp.Body.Read(buf)
 			if err2 != nil {
+				tChunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)
+				tMarshal, _ := json.Marshal(tChunk)
+				msgChan <- fmt.Sprintf("data: %s\n\n", tMarshal)
+				msgChan <- fmt.Sprintf("data: [DONE]\n")
 				break
 			}
 			var str = string(buf[:n])
@@ -57,7 +62,10 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 			if index > 0 {
 				str = str[index:]
 			}
-			result, id, finish := transTongYiResp2OpenAIResp(openaiBody.Model, str)
+			result, tid, finish := transTongYiResp2OpenAIResp(openaiBody.Model, str)
+			if id == "" {
+				id = tid
+			}
 			msgChan <- fmt.Sprintf("data: %s\n\n", result)
 			if finish {
 				chunk := model.NewStopChatCompletionChunk(id, openaiBody.Model)

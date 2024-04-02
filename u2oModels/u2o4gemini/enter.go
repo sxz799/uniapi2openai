@@ -145,7 +145,7 @@ func sendStreamResponse(cs *genai.ChatSession, ctx context.Context, lastMsg, mod
 				marshal, _ := json.Marshal(chunk)
 				_, err = c.Writer.WriteString("data: " + string(marshal) + "\n\n")
 				if err != nil {
-					return
+					break
 				}
 				c.Writer.Flush()
 			}

@@ -4,9 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sxz799/uniapi2openai/config"
 	"github.com/sxz799/uniapi2openai/model"
-	"github.com/sxz799/uniapi2openai/u2oProducts/u2o4gemini"
-	"github.com/sxz799/uniapi2openai/u2oProducts/u2o4tongyi"
-	"github.com/sxz799/uniapi2openai/u2oProducts/u2o4tongyiWeb"
+	"github.com/sxz799/uniapi2openai/u2oModels/u2o4gemini"
+	"github.com/sxz799/uniapi2openai/u2oModels/u2o4tongyi"
+	"github.com/sxz799/uniapi2openai/u2oModels/u2o4tongyiWeb"
 )
 
 func DoTrans(ignoreSystemPrompt bool, c *gin.Context) {

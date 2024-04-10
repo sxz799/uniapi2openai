@@ -33,7 +33,7 @@ func main() {
 	r.GET("/", func(context *gin.Context) {
 		context.String(200, "部署成功")
 	})
-	r.POST("v1/chat/completions", func(c *gin.Context) {
+	r.POST("/v1/chat/completions", func(c *gin.Context) {
 		u2oService.DoTrans(true, c)
 	})
 	r.NoRoute(func(c *gin.Context) {

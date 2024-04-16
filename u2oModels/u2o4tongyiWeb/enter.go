@@ -94,7 +94,7 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 				continue
 			}
 			tMsg := tongYiWebRespBody.Contents[0].Content
-			tMsg2 := strings.TrimLeft(tMsg, lastMsg)
+			tMsg2 := strings.Replace(tMsg, lastMsg, "", 1)
 			if tMsg2 == "" && tongYiWebRespBody.StopReason != "stop" {
 				continue
 			}
@@ -104,6 +104,7 @@ func DoTrans(ignoreSystemPrompt bool, openaiBody model.OpenaiBody, c *gin.Contex
 
 			chunk := model.NewChatCompletionChunk(id, tMsg2, "qwen-web")
 			chunkBytes, _ := json.Marshal(chunk)
+
 			msgChan <- fmt.Sprintf("data: %s\n\n", chunkBytes)
 			lastMsg = tMsg
 		}
